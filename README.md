@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Multi-Tenant SaaS Booking Platform (MVP)
 
-## Getting Started
+A modern, full-stack multi-tenant SaaS booking platform built to help service-based businesses (auto repair shops, beauty salons, medical clinics, fitness centers) manage bookings, services, and client schedules efficiently.
 
-First, run the development server:
+The platform features **Self-Service Onboarding**, **Strict Tenant Isolation**, and **Dynamic Public Booking Pages** for each registered business.
 
-```bash
+---
+
+## 🛠 Tech Stack
+
+* **Framework:** [Next.js 15+](https://nextjs.org/) (App Router, Server Actions)
+* **Authentication:** [Supabase Auth](https://supabase.com/) (`@supabase/ssr` for secure cookie-based session management)
+* **Database & ORM:** [PostgreSQL](https://www.postgresql.org/) (Hosted on Supabase) + [Prisma ORM](https://www.prisma.io/)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **Version Control:** Git & GitHub
+
+---
+
+## 🌟 Key Features Built
+
+### 1. Self-Service Business Onboarding
+* Instant business account creation with an automatically generated unique URL slug (`/[slug]`).
+* Atomic registration flow: creates user credentials in Supabase Auth and initial business data in PostgreSQL simultaneously.
+* Automatic seed of the primary service, default pricing, and duration upon signup.
+
+### 2. Multi-Tenant Architecture & Security
+* Multi-tenant data isolation verified via `business.userId === user.id`.
+* Automatic route redirection to prevent cross-tenant dashboard access.
+* Secure server-side authentication backed by Server Actions and HTTP-only cookies.
+
+### 3. Dedicated Admin Dashboards (`/[slug]/admin`)
+* Real-time dashboard to view incoming appointments.
+* Overview of active services, pricing structures, and service durations.
+* Business stats cards displaying total bookings and service counts.
+
+---
+
+## 🗄 Database Schema (Prisma)
+
+```prisma
+model Business {
+  id        String   @id @default(cuid())
+  userId    String?  // References Supabase Auth User ID
+  name      String
+  slug      String   @unique
+  category  String
+  phone     String
+  email     String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services  Service[]
+  bookings  Booking[]
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  price       Float
+  durationMin Int
+  createdAt   DateTime @default(now())
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  businessId    String
+  serviceName   String?
+  customerName  String
+  customerPhone String
+  bookingDate   DateTime
+  createdAt     DateTime @default(now())
+
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+⚙️ Getting Started
+1. Clone the repository
+Bash
+git clone [https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git](https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git)
+cd my-booking-saas
+npm install
+2. Environment Configuration
+Create a .env file in the root directory and add the following keys:
+
+Фрагмент от код
+DATABASE_URL="postgresql://postgres.[REF]:[PASSWORD]@[aws-0-eu-central-1.pooler.supabase.com:5432/postgres](https://aws-0-eu-central-1.pooler.supabase.com:5432/postgres)"
+NEXT_PUBLIC_SUPABASE_URL="https://[REF].supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
+3. Database Synchronization
+Push schema to PostgreSQL and generate local Prisma Client types:
+
+Bash
+npx prisma db push
+npx prisma generate
+4. Run Development Server
+Bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Open http://localhost:3000 in your browser.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🗺 Roadmap
+[ ] Add CRUD actions for services inside the tenant admin dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+[ ] Calendar view for appointments inside the admin area.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+[ ] Interactive public booking page (/[slug]) with time-slot selection.
 
-## Learn More
+[ ] Email and SMS notifications for new appointments.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[ ] Business operating hours and staff schedule management.
