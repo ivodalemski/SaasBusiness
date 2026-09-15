@@ -1,133 +1,155 @@
-import { prisma } from '@/lib/prisma';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { notFound, redirect } from 'next/navigation';
-import { logoutUserAction } from '@/app/actions/auth';
+'use client';
 
-interface AdminPageProps {
-  params: Promise<{ slug: string }>;
+import { useState, useTransition } from 'react';
+import { createService, deleteService } from '@/app/actions/services';
+
+export interface Service {
+  id: string;
+  name: string;
+  price: number | any;
+  duration: number | any;
+  description?: string | null;
 }
 
-export default async function BusinessAdminPage({ params }: AdminPageProps) {
-  const { slug } = await params;
-  const cookieStore = await cookies();
+export interface ServicesManagerProps {
+  businessId: string;
+  slug: string;
+  services: Service[] | any[];
+}
 
-  // 1. Проверка за логнат потребител през Supabase
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll() {},
-      },
-    }
-  );
+export default function ServicesManager({ businessId, slug, services }: ServicesManagerProps) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
+  async function handleAddService(formData: FormData) {
+    setError(null);
+    startTransition(async () => {
+      const res = await (createService as any)(formData, slug);
+      if (!res?.success) {
+        setError(res?.error || 'Възникна грешка при добавянето.');
+      }
+    });
   }
 
-  // 2. Вземане на данните за бизнеса и неговите услуги
-  const business = await prisma.business.findUnique({
-    where: { slug },
-    include: {
-      services: true,
-    },
-  });
-
-  if (!business || business.userId !== user.id) {
-    notFound();
+  async function handleDelete(serviceId: string) {
+    if (!confirm('Сигурни ли сте, че искате да изтриете тази услуга?')) return;
+    
+    startTransition(async () => {
+      await (deleteService as any)(serviceId, slug);
+    });
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Хедър на Таблото */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+    <div className="space-y-8">
+      {/* Карта: Добавяне на Нова Услуга */}
+      <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800/80 shadow-2xl p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+            ⚡
+          </div>
           <div>
-            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
-              Административен панел
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-100 mt-2">
-              {business.name}
-            </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Управление на услуги и резервации
-            </p>
+            <h2 className="text-lg font-bold text-slate-100 tracking-wide">Добавяне на услуга</h2>
+            <p className="text-xs text-slate-400">Въведете детайли за новата услуга, която предлагате</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium">
+            ⚠️ {error}
+          </div>
+        )}
+
+        <form action={handleAddService} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <input type="hidden" name="businessId" value={businessId} />
+
+          {/* Наименование */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Наименование</label>
+            <input
+              type="text"
+              name="name"
+              required
+              placeholder="напр. Мъжко подстригване"
+              className="w-full bg-slate-950/60 border border-slate-800 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition"
+            />
           </div>
 
-          {/* Бутон "Клиентска страница" - Излиза от профила и отваря публичната страница */}
-          <form
-            action={async () => {
-              'use server';
-              await logoutUserAction(`/${slug}`);
-            }}
-          >
+          {/* Цена */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Цена (лв.)</label>
+            <input
+              type="number"
+              name="price"
+              step="0.01"
+              required
+              placeholder="25.00"
+              className="w-full bg-slate-950/60 border border-slate-800 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition"
+            />
+          </div>
+
+          {/* Времетраене */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Времетраене (мин)</label>
+            <input
+              type="number"
+              name="duration"
+              defaultValue={30}
+              required
+              placeholder="30"
+              className="w-full bg-slate-950/60 border border-slate-800 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 outline-none transition"
+            />
+          </div>
+
+          {/* Бутон за запис */}
+          <div className="flex items-end">
             <button
               type="submit"
-              className="bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-slate-300 border border-slate-800 font-bold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+              disabled={isPending}
+              className="w-full bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-bold text-sm px-5 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/10 disabled:opacity-50"
             >
-              <span>Клиентска страница</span>
-              <span className="font-mono">→</span>
+              {isPending ? 'Запазване...' : '+ Добави услуга'}
             </button>
-          </form>
-        </div>
-
-        {/* Секция с Услуги */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-              <span className="text-amber-400">🛠️</span>
-              <span>Предлагани Услуги</span>
-            </h2>
           </div>
-
-          {/* Таблица с Услуги (Без излишен бутон за изход отгоре) */}
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl">
-            {business.services.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 text-sm">
-                Все още нямати добавени услуги.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
-                  <thead className="bg-slate-900/80 text-xs font-semibold text-slate-400 uppercase border-b border-slate-800">
-                    <tr>
-                      <th className="px-6 py-4">Име на услугата</th>
-                      <th className="px-6 py-4">Продължителност</th>
-                      <th className="px-6 py-4 text-right">Цена</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/50">
-                    {business.services.map((service) => (
-                      <tr key={service.id} className="hover:bg-slate-900/40 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-100">
-                          {service.name}
-                        </td>
-                        <td className="px-6 py-4 text-slate-400 font-mono text-xs">
-                          ⏱️ {service.duration} мин.
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-amber-400 font-mono">
-                          {service.price} лв.
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
+        </form>
       </div>
-    </main>
+
+      {/* Списък с активни услуги */}
+      <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800/80 shadow-2xl p-6 sm:p-8">
+        <h3 className="text-base font-bold text-slate-100 mb-4 tracking-wide">
+          Текущи услуги ({services?.length || 0})
+        </h3>
+
+        {!services || services.length === 0 ? (
+          <p className="text-xs text-slate-500 py-4">Все още нямате добавени услуги.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {services.map((service: any) => (
+              <div
+                key={service.id}
+                className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex items-center justify-between hover:border-slate-700/80 transition group"
+              >
+                <div>
+                  <h4 className="font-semibold text-slate-100 text-sm">{service.name}</h4>
+                  <div className="flex items-center gap-3 mt-1.5 text-xs">
+                    <span className="font-bold text-amber-400">{service.price} лв.</span>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-400 font-mono">{service.duration} мин</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleDelete(service.id)}
+                  disabled={isPending}
+                  className="text-xs bg-slate-900 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 p-2 rounded-xl transition"
+                  title="Изтрий услугата"
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
