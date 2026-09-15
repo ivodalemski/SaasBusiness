@@ -36,18 +36,18 @@ export default function BookingForm({ businessId, businessName, services }: Book
   const selectedService = services.find((s) => s.id === selectedServiceId);
 
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || !selectedService) return;
 
     async function fetchSlots() {
       setLoadingSlots(true);
       setSelectedTime('');
-      const slots = await getBookedSlots(businessId, selectedDate);
+      const slots = await getBookedSlots(businessId, selectedDate, selectedService?.durationMin);
       setBookedTimes(slots);
       setLoadingSlots(false);
     }
 
     fetchSlots();
-  }, [selectedDate, businessId]);
+  }, [selectedDate, businessId, selectedServiceId, selectedService?.durationMin]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
