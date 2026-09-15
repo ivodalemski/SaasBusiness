@@ -1,20 +1,18 @@
-import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { notFound, redirect } from 'next/navigation';
+import { logoutUserAction } from '@/app/actions/auth';
 
 interface AdminPageProps {
-  params: Promise<{
-    slug: string;
-  }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function BusinessAdminPage({ params }: AdminPageProps) {
   const { slug } = await params;
   const cookieStore = await cookies();
 
-  // 1. Инициализиране на Supabase Сървърен Клиент
+  // 1. Проверка за логнат потребител през Supabase
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,20 +21,11 @@ export default async function BusinessAdminPage({ params }: AdminPageProps) {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Игнорира се при сървърно изпълнение
-          }
-        },
+        setAll() {},
       },
     }
   );
 
-  // 2. Проверка дали има влязъл потребител
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -45,181 +34,100 @@ export default async function BusinessAdminPage({ params }: AdminPageProps) {
     redirect('/login');
   }
 
-  // 3. Вземане на бизнеса от базата данни заедно с неговите резервации и услуги
+  // 2. Вземане на данните за бизнеса и неговите услуги
   const business = await prisma.business.findUnique({
     where: { slug },
     include: {
       services: true,
-      bookings: {
-        orderBy: {
-          createdAt: 'desc',
-        },
-      },
     },
   });
 
-  if (!business) {
+  if (!business || business.userId !== user.id) {
     notFound();
   }
 
-  // 4. 🔒 ПРОВЕРКА ЗА СОБСТВЕНОСТ (Защита от достъп до чужд админ панел)
-  if (business.userId !== user.id) {
-    const ownBusiness = await prisma.business.findFirst({
-      where: { userId: user.id },
-    });
-
-    if (ownBusiness) {
-      redirect(`/${ownBusiness.slug}/admin`);
-    } else {
-      redirect('/login');
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-12">
-      {/* Навигационна лента (Header) */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🏢</span>
-            <div>
-              <h1 className="font-bold text-slate-900 text-base sm:text-lg leading-tight">
-                {business.name}
-              </h1>
-              <p className="text-xs text-slate-500">
-                Категория: <span className="font-medium text-slate-700">{business.category}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/${business.slug}`}
-              target="_blank"
-              className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl transition font-medium flex items-center gap-1"
-            >
-              <span>🔗</span>
-              <span className="hidden sm:inline">Виж клиентската страница</span>
-            </Link>
-
-            <Link
-  href="/login"
-  className="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl transition font-semibold"
->
-  Изход
-</Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Основно съдържание */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+    <main className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* Бързи Статистики */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl text-xl">📅</div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Общо резервации</p>
-              <p className="text-2xl font-black text-slate-900">{business.bookings.length}</p>
-            </div>
+        {/* Хедър на Таблото */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+          <div>
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
+              Административен панел
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-100 mt-2">
+              {business.name}
+            </h1>
+            <p className="text-xs text-slate-400 mt-1">
+              Управление на услуги и резервации
+            </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-xl">🛠️</div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Предлагани услуги</p>
-              <p className="text-2xl font-black text-slate-900">{business.services.length}</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl text-xl">📍</div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Адрес</p>
-              <p className="text-xs font-bold text-slate-800 truncate max-w-[180px]">
-                {business.address || 'Не е посочен'}
-              </p>
-            </div>
-          </div>
+          {/* Бутон "Клиентска страница" - Излиза от профила и отваря публичната страница */}
+          <form
+            action={async () => {
+              'use server';
+              await logoutUserAction(`/${slug}`);
+            }}
+          >
+            <button
+              type="submit"
+              className="bg-slate-900 hover:bg-amber-400 hover:text-slate-950 text-slate-300 border border-slate-800 font-bold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+            >
+              <span>Клиентска страница</span>
+              <span className="font-mono">→</span>
+            </button>
+          </form>
         </div>
 
-        {/* Секция: Таблица с резервации */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Последно направени резервации</h2>
-              <p className="text-xs text-slate-500">Списък на всички записани часчета от клиенти</p>
-            </div>
-          </div>
-
-          {business.bookings.length === 0 ? (
-            <div className="p-12 text-center space-y-3">
-              <span className="text-4xl">📭</span>
-              <p className="text-sm font-semibold text-slate-700">Все още няма направени резервации.</p>
-              <p className="text-xs text-slate-400">
-                Споделете вашия линк <span className="font-mono text-blue-600">localhost:3000/{business.slug}</span> с клиенти.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-6">Клиент</th>
-                    <th className="py-3 px-6">Услуга</th>
-                    <th className="py-3 px-6">Дата & Час</th>
-                    <th className="py-3 px-6">Телефон</th>
-                    <th className="py-3 px-6">Статус</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {business.bookings.map((booking: any) => (
-                    <tr key={booking.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-4 px-6 font-semibold text-slate-900">{booking.customerName}</td>
-                      <td className="py-4 px-6 text-slate-700">{booking.serviceName || 'Стандартна услуга'}</td>
-                      <td className="py-4 px-6 text-slate-600 font-mono text-xs">
-                        {booking.bookingDate
-                          ? new Date(booking.bookingDate).toLocaleString('bg-BG', {
-                              dateStyle: 'medium',
-                              timeStyle: 'short',
-                            })
-                          : 'Непосочена дата'}
-                      </td>
-                      <td className="py-4 px-6 text-slate-600 font-mono text-xs">{booking.customerPhone}</td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                          Потвърдена
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Секция: Активни услуги */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        {/* Секция с Услуги */}
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Вашите Услуги и Цени</h2>
+            <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <span className="text-amber-400">🛠️</span>
+              <span>Предлагани Услуги</span>
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {business.services.map((service: any) => (
-              <div key={service.id} className="p-4 border border-slate-100 rounded-xl bg-slate-50/50 space-y-2">
-                <p className="font-bold text-slate-900 text-sm">{service.name}</p>
-                <div className="flex justify-between text-xs text-slate-500 font-medium">
-                  <span>Времетраене: {service.durationMin} мин.</span>
-                  <span className="text-blue-600 font-bold">{service.price} лв.</span>
-                </div>
+          {/* Таблица с Услуги (Без излишен бутон за изход отгоре) */}
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl">
+            {business.services.length === 0 ? (
+              <div className="text-center py-12 text-slate-500 text-sm">
+                Все още нямати добавени услуги.
               </div>
-            ))}
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-300">
+                  <thead className="bg-slate-900/80 text-xs font-semibold text-slate-400 uppercase border-b border-slate-800">
+                    <tr>
+                      <th className="px-6 py-4">Име на услугата</th>
+                      <th className="px-6 py-4">Продължителност</th>
+                      <th className="px-6 py-4 text-right">Цена</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {business.services.map((service) => (
+                      <tr key={service.id} className="hover:bg-slate-900/40 transition-colors">
+                        <td className="px-6 py-4 font-medium text-slate-100">
+                          {service.name}
+                        </td>
+                        <td className="px-6 py-4 text-slate-400 font-mono text-xs">
+                          ⏱️ {service.duration} мин.
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-amber-400 font-mono">
+                          {service.price} лв.
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

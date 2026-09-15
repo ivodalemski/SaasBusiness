@@ -78,13 +78,13 @@ export default function BookingForm({ businessId, businessName, services }: Book
 
   if (success) {
     return (
-      <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 text-green-900 p-8 rounded-2xl text-center space-y-4 shadow-sm animate-fade-in">
-        <div className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto shadow-md text-2xl">
+      <div className="bg-emerald-950/40 border border-emerald-500/30 text-emerald-200 p-8 rounded-2xl text-center space-y-4 shadow-2xl backdrop-blur-xl">
+        <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl shadow-lg">
           ✓
         </div>
-        <h2 className="text-2xl font-bold">Часът е запазен успешно!</h2>
-        <p className="text-sm text-green-700 max-w-md mx-auto">
-          Благодарим Ви! Вашата резервация за <strong>{selectedDate}</strong> в <strong>{selectedTime} ч.</strong> бе регистрирана. Изпратихме потвърждение на посочения имейл.
+        <h2 className="text-2xl font-bold text-slate-100">Часът е запазен успешно!</h2>
+        <p className="text-sm text-slate-300 max-w-md mx-auto">
+          Благодарим Ви! Вашата резервация за <strong className="text-amber-400 font-mono">{selectedDate}</strong> в <strong className="text-amber-400 font-mono">{selectedTime} ч.</strong> бе регистрирана. Изпратихме потвърждение на посочения имейл.
         </p>
         <button
           onClick={() => {
@@ -92,7 +92,7 @@ export default function BookingForm({ businessId, businessName, services }: Book
             setSelectedDate('');
             setSelectedTime('');
           }}
-          className="mt-2 bg-green-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-green-700 transition shadow-sm"
+          className="mt-4 bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold px-6 py-2.5 rounded-xl text-sm transition border border-slate-700 shadow-lg"
         >
           Запази друг час
         </button>
@@ -103,7 +103,7 @@ export default function BookingForm({ businessId, businessName, services }: Book
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {errorMsg && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-xl text-sm border border-red-200 flex items-center gap-3">
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-xs font-medium flex items-center gap-3">
           <span>⚠️</span>
           <span>{errorMsg}</span>
         </div>
@@ -111,7 +111,7 @@ export default function BookingForm({ businessId, businessName, services }: Book
 
       {/* Стъпка 1: Избор на услуга */}
       <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-3">
+        <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">
           1. Изберете услуга
         </label>
         <div className="grid grid-cols-1 gap-3">
@@ -123,16 +123,16 @@ export default function BookingForm({ businessId, businessName, services }: Book
                 onClick={() => setSelectedServiceId(service.id)}
                 className={`cursor-pointer p-4 rounded-xl border transition-all flex justify-between items-center ${
                   isSelected
-                    ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20 shadow-sm'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                    ? 'bg-amber-500/10 border-amber-500/80 shadow-lg shadow-amber-500/5 ring-1 ring-amber-500/50'
+                    : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
                 }`}
               >
                 <div className="space-y-1">
-                  <div className="font-semibold text-gray-900">{service.name}</div>
-                  <div className="text-xs text-gray-500">⏱️ {service.durationMin} мин</div>
+                  <div className="font-semibold text-slate-100 text-sm">{service.name}</div>
+                  <div className="text-xs font-mono text-slate-500">⏱️ {service.durationMin} мин</div>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-blue-600">{service.price} лв.</span>
+                  <span className="text-base font-bold text-amber-400 block">{service.price} лв.</span>
                 </div>
               </div>
             );
@@ -142,7 +142,7 @@ export default function BookingForm({ businessId, businessName, services }: Book
 
       {/* Стъпка 2: Избор на дата */}
       <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-2">
+        <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
           2. Изберете дата
         </label>
         <input
@@ -151,19 +151,19 @@ export default function BookingForm({ businessId, businessName, services }: Book
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
           required
-          className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
+          className="w-full bg-slate-950/60 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 outline-none transition"
         />
       </div>
 
       {/* Стъпка 3: Избор на свободен час */}
       {selectedDate && (
         <div>
-          <label className="block text-sm font-semibold text-gray-800 mb-2">
+          <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
             3. Изберете свободен час
           </label>
           
           {loadingSlots ? (
-            <div className="text-xs text-gray-500 py-2">Зареждане на свободните часове...</div>
+            <div className="text-xs text-slate-500 py-2 font-mono">Зареждане на свободните часове...</div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {DAILY_SLOTS.map((slot) => {
@@ -176,12 +176,12 @@ export default function BookingForm({ businessId, businessName, services }: Book
                     type="button"
                     disabled={isBooked}
                     onClick={() => setSelectedTime(slot)}
-                    className={`py-2.5 rounded-xl text-sm font-medium border transition ${
+                    className={`py-2.5 rounded-xl text-xs font-mono transition border ${
                       isBooked
-                        ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed line-through'
+                        ? 'bg-slate-900 border-slate-800/50 text-slate-600 line-through cursor-not-allowed'
                         : isSelected
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-blue-500 hover:text-blue-600'
+                        ? 'bg-amber-400 text-slate-950 font-bold border-amber-400 shadow-md shadow-amber-500/20'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700 hover:text-amber-400'
                     }`}
                   >
                     {slot}
@@ -195,65 +195,65 @@ export default function BookingForm({ businessId, businessName, services }: Book
 
       {/* Стъпка 4: Данни за контакт */}
       <div className="space-y-4 pt-2">
-        <label className="block text-sm font-semibold text-gray-800">
+        <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
           4. Данни за резервацията
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Вашето име / Фирма</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Вашето име / Фирма</label>
             <input
               type="text"
               name="customerName"
               required
               placeholder="Иван Иванов / ЕООД"
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
+              className="w-full bg-slate-950/60 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-600 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 outline-none transition"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Телефон за връзка</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Телефон за връзка</label>
             <input
               type="tel"
               name="customerPhone"
               required
               placeholder="0888 123 456"
-              className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
+              className="w-full bg-slate-950/60 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-600 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 outline-none transition"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Имейл адрес (за известия)</label>
+          <label className="block text-xs font-medium text-slate-400 mb-1">Имейл адрес (за известия)</label>
           <input
             type="email"
             name="customerEmail"
             required
             placeholder="ivan@example.com"
-            className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white"
+            className="w-full bg-slate-950/60 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-600 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 outline-none transition"
           />
         </div>
       </div>
 
       {/* Обобщение и изпращане */}
-      <div className="pt-4 border-t border-gray-100">
+      <div className="pt-4 border-t border-slate-800/80">
         {selectedService && (
-          <div className="flex justify-between items-center mb-4 text-sm text-gray-600 bg-gray-50 p-3.5 rounded-xl border border-gray-200/60">
+          <div className="flex justify-between items-center mb-4 text-xs bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 text-slate-400">
             <div>
-              <span>Избрано: <strong>{selectedService.name}</strong></span>
+              <span>Избрано: <strong className="text-slate-200">{selectedService.name}</strong></span>
               {selectedDate && selectedTime && (
-                <div className="text-xs text-blue-600 font-semibold mt-0.5">
+                <div className="text-amber-400 font-mono font-semibold mt-0.5">
                   📅 {selectedDate} в {selectedTime} ч.
                 </div>
               )}
             </div>
-            <span className="font-bold text-gray-900">{selectedService.price} лв.</span>
+            <span className="font-bold text-base text-amber-400">{selectedService.price} лв.</span>
           </div>
         )}
 
         <button
           type="submit"
           disabled={loading || !selectedDate || !selectedTime}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-xl transition duration-200 shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 text-base"
+          className="w-full bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-bold py-3.5 px-6 rounded-xl transition shadow-lg shadow-amber-500/10 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
         >
           {loading ? 'Запазване...' : 'Запази час'}
         </button>

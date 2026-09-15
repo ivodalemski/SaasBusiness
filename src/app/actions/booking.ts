@@ -156,4 +156,16 @@ export async function updateBookingStatus(bookingId: string, status: string, slu
     console.error('Грешка при обновяване на статуса:', error);
     return { success: false, error: 'Възникна грешка при обновяването.' };
   }
+}export async function deleteBooking(bookingId: string, slug: string) {
+  try {
+    await prisma.booking.delete({
+      where: { id: bookingId },
+    });
+
+    revalidatePath(`/${slug}/admin`);
+    return { success: true };
+  } catch (error) {
+    console.error('Грешка при изтриване на резервацията:', error);
+    return { success: false, error: 'Възникна грешка при изтриването.' };
+  }
 }
